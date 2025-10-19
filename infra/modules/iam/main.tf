@@ -1,7 +1,10 @@
 data "aws_iam_policy_document" "eks_assume" {
   statement {
     effect = "Allow"
-    principals { type = "Service"; identifiers = ["eks.amazonaws.com"] }
+    principals { 
+        type = "Service"
+        identifiers = ["eks.amazonaws.com"] 
+    }
     actions = ["sts:AssumeRole"]
   }
 }
@@ -24,7 +27,10 @@ resource "aws_iam_role_policy_attachment" "service_policy" {
 data "aws_iam_policy_document" "node_assume" {
   statement {
     effect = "Allow"
-    principals { type = "Service"; identifiers = ["ec2.amazonaws.com"] }
+    principals { 
+        type = "Service" 
+        identifiers = ["ec2.amazonaws.com"] 
+    }
     actions = ["sts:AssumeRole"]
   }
 }
