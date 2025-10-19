@@ -1,11 +1,16 @@
-# Get Availability Zones
+# -------------------
+# Data Sources
+# -------------------
 data "aws_availability_zones" "azs" {}
 
 # -------------------
 # VPC
 # -------------------
 resource "aws_vpc" "this" {
-  cidr_block = var.vpc_cidr
+  cidr_block           = var.vpc_cidr
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+
   tags = {
     Name = "${var.name_prefix}-vpc"
   }
@@ -22,7 +27,9 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "${var.name_prefix}-public-${count.index}"
+    Name                              = "${var.name_prefix}-public-${count.index}"
+    "kubernetes.io/role/elb"          = "1"
+    "kubernetes.io/cluster/${var.name_prefix}-eks" = "shared"
   }
 }
 
@@ -36,7 +43,9 @@ resource "aws_subnet" "private" {
   availability_zone = element(data.aws_availability_zones.azs.names, count.index)
 
   tags = {
-    Name = "${var.name_prefix}-private-${count.index}"
+    Name                              = "${var.name_prefix}-private-${count.index}"
+    "kubernetes.io/role/internal-elb" = "1"
+    "kubernetes.io/cluster/${var.name_prefix}-eks" = "shared"
   }
 }
 
@@ -87,7 +96,7 @@ resource "aws_security_group" "vpc_endpoints" {
 }
 
 # -------------------
-# Required Interface Endpoints (EKS, EC2, STS, Logs)
+# Interface Endpoints (EKS, EC2, STS, Logs)
 # -------------------
 locals {
   interface_services = [
@@ -109,5 +118,21 @@ resource "aws_vpc_endpoint" "interface_endpoints" {
 
   tags = {
     Name = "${var.name_prefix}-endpoint-${replace(each.value, "com.amazonaws.${var.aws_region}.", "")}"
+  }
+}
+
+# -------------------
+# Gateway Endpoints (S3, DynamoDB)
+# -------------------
+resource "aws_vpc_endpoint" "gateway_endpoints" {
+  for_each = toset(["s3", "dynamodb"])
+
+  vpc_id            = aws_vpc.this.id
+  service_name      = "com.amazonaws.${var.aws_region}.${each.key}"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = [aws_route_table.public.id]
+
+  tags = {
+    Name = "${var.name_prefix}-endpoint-${each.key}"
   }
 }
