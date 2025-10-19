@@ -20,3 +20,4 @@ echo "Acquire::https::Proxy \"http://${SQUID_IP}:3128/\";" >> /etc/apt/apt.conf.
 usermod -aG docker jenkins
 systemctl enable docker jenkins
 systemctl restart docker jenkins
+
