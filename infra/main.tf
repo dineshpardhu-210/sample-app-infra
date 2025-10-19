@@ -2,6 +2,7 @@ module "vpc" {
   source = "./modules/vpc"
   name_prefix = var.name_prefix
   vpc_cidr    = var.vpc_cidr
+  aws_region  =var.region
 }
 
 module "iam" {
@@ -28,5 +29,5 @@ module "eks" {
   cluster_role_arn      = module.iam.cluster_role_arn
   node_role_arn         = module.iam.node_role_arn
   eks_node_instance_type = "t3.small"
-  squid_private_ip      = module.jenkins_instance.squid_private_ip   # ✅ Added
+  squid_private_ip      = module.jenkins_instance.squid_private_ip   # Added
 }
