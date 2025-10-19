@@ -91,18 +91,3 @@ resource "aws_iam_instance_profile" "jenkins_ssm_profile" {
   name = "${var.name_prefix}-jenkins-ssm-profile"
   role = aws_iam_role.jenkins_ssm_role.name
 }
-
-# --------------------------------------------------------------------
-# Outputs
-# --------------------------------------------------------------------
-output "cluster_role_arn" {
-  value = aws_iam_role.eks_cluster_role.arn
-}
-
-output "node_role_arn" {
-  value = aws_iam_role.eks_node_role.arn
-}
-
-output "jenkins_ssm_instance_profile_name" {
-  value = aws_iam_instance_profile.jenkins_ssm_profile.name
-}
