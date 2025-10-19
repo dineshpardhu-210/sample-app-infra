@@ -73,7 +73,6 @@ resource "aws_security_group" "squid" {
   description = "Allow Jenkins and VPC instances to use proxy"
   vpc_id      = var.vpc_id
 
-  # Allow inbound proxy requests from private subnets
   ingress {
     from_port   = 3128
     to_port     = 3128
@@ -81,7 +80,6 @@ resource "aws_security_group" "squid" {
     cidr_blocks = [var.vpc_cidr]
   }
 
-  # Allow Squid → Internet (to fetch content)
   egress {
     from_port   = 0
     to_port     = 0
@@ -94,11 +92,11 @@ resource "aws_security_group" "squid" {
 #  Squid Proxy Instance (Public Subnet)
 # --------------------------------------------------------------------
 resource "aws_instance" "squid" {
-  ami           = data.aws_ami.ubuntu.id
-  instance_type = "t3.micro"
-  subnet_id     = var.public_subnet_id
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = "t3.micro"
+  subnet_id              = var.public_subnet_id
   vpc_security_group_ids = [aws_security_group.squid.id]
-  key_name      = var.key_name
+  key_name               = var.key_name
 
   user_data = <<-EOF
     #!/bin/bash
@@ -115,7 +113,7 @@ resource "aws_instance" "squid" {
 }
 
 # --------------------------------------------------------------------
-#  Jenkins Instance (Private Subnet) with Proxy Config
+#  Jenkins Instance (Private Subnet) with Proxy + SSM Agent
 # --------------------------------------------------------------------
 resource "aws_instance" "jenkins" {
   ami                    = data.aws_ami.ubuntu.id
@@ -123,6 +121,7 @@ resource "aws_instance" "jenkins" {
   subnet_id              = var.private_subnet_id
   vpc_security_group_ids = [aws_security_group.jenkins.id]
   key_name               = var.key_name
+  iam_instance_profile   = var.jenkins_ssm_instance_profile_name
 
   user_data = templatefile("${path.module}/user_data.sh", {
     squid_ip = aws_instance.squid.private_ip
@@ -166,3 +165,4 @@ resource "aws_lb_target_group_attachment" "att" {
   target_id        = aws_instance.jenkins.id
   port             = 8080
 }
+
