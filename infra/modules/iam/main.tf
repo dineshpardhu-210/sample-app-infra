@@ -1,93 +1,50 @@
-# --------------------------------------------------------------------
-#  IAM Role for EKS Cluster
-# --------------------------------------------------------------------
-resource "aws_iam_role" "eks_cluster_role" {
-  name = "${var.name_prefix}-eks-cluster-role"
+#############################################
+# IAM Module - main.tf
+# Purpose: Create IAM Role + Instance Profile
+# for Jenkins EC2 instance with SSM access
+#############################################
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Principal = {
-          Service = "eks.amazonaws.com"
-        },
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "eks_cluster_policies" {
-  for_each = toset([
-    "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy",
-    "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
-  ])
-  role       = aws_iam_role.eks_cluster_role.name
-  policy_arn = each.value
-}
-
-# --------------------------------------------------------------------
-#  IAM Role for EKS Worker Nodes
-# --------------------------------------------------------------------
-resource "aws_iam_role" "eks_node_role" {
-  name = "${var.name_prefix}-eks-node-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        },
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "eks_node_policies" {
-  for_each = toset([
-    "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
-    "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy",
-    "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-  ])
-  role       = aws_iam_role.eks_node_role.name
-  policy_arn = each.value
-}
-
-resource "aws_iam_instance_profile" "eks_node_profile" {
-  name = "${var.name_prefix}-eks-node-profile"
-  role = aws_iam_role.eks_node_role.name
-}
-
-# --------------------------------------------------------------------
-#  IAM Role for Jenkins EC2 (SSM Access)
-# --------------------------------------------------------------------
-resource "aws_iam_role" "jenkins_ssm_role" {
-  name = "${var.name_prefix}-jenkins-ssm-role"
+resource "aws_iam_role" "jenkins_role" {
+  name = "${var.name}-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow",
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        }
-        Action = "sts:AssumeRole"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
       }
-    ]
+      Action = "sts:AssumeRole"
+    }]
   })
+
+  tags = merge(var.tags, { Name = "${var.name}-role" })
 }
 
-resource "aws_iam_role_policy_attachment" "ssm_core_attach" {
-  role       = aws_iam_role.jenkins_ssm_role.name
+# Attach core policy for SSM Session Manager
+resource "aws_iam_role_policy_attachment" "ssm" {
+  role       = aws_iam_role.jenkins_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
-resource "aws_iam_instance_profile" "jenkins_ssm_profile" {
-  name = "${var.name_prefix}-jenkins-ssm-profile"
-  role = aws_iam_role.jenkins_ssm_role.name
+# Optional: Attach ECR pull policy if Jenkins needs to interact with ECR
+resource "aws_iam_role_policy_attachment" "ecr" {
+  count      = var.enable_ecr_access ? 1 : 0
+  role       = aws_iam_role.jenkins_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+# Optional: Allow Jenkins to write logs to CloudWatch
+resource "aws_iam_role_policy_attachment" "cw" {
+  count      = var.enable_cloudwatch_logs ? 1 : 0
+  role       = aws_iam_role.jenkins_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
+# Create an instance profile for EC2
+resource "aws_iam_instance_profile" "jenkins_profile" {
+  name = "${var.name}-instance-profile"
+  role = aws_iam_role.jenkins_role.name
+
+  tags = merge(var.tags, { Name = "${var.name}-instance-profile" })
 }

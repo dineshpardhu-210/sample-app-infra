@@ -1,85 +1,91 @@
-# ------------------------------------------------------------------
-#  EKS Cluster
-# ------------------------------------------------------------------
+#############################################
+# EKS Module - Self-contained (Cluster + Node Group)
+#############################################
+
+# --- IAM role for EKS Cluster ---
+resource "aws_iam_role" "cluster_role" {
+  name = "${var.name}-cluster-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "eks.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "cluster_policies" {
+  for_each = toset([
+    "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy",
+    "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
+  ])
+  role       = aws_iam_role.cluster_role.name
+  policy_arn = each.value
+}
+
+# --- Create EKS Cluster ---
 resource "aws_eks_cluster" "this" {
-  name     = "${var.name_prefix}-eks"
-  role_arn = var.cluster_role_arn
+  name     = var.name
+  role_arn = aws_iam_role.cluster_role.arn
 
   vpc_config {
-    subnet_ids = var.private_subnets
+    subnet_ids = concat(var.public_subnet_ids, var.private_subnet_ids)
   }
 
-  depends_on = [var.cluster_role_arn]
+  depends_on = [aws_iam_role_policy_attachment.cluster_policies]
 }
 
-# ------------------------------------------------------------------
-#  Launch Template for Worker Nodes (with Squid Proxy)
-# ------------------------------------------------------------------
-data "aws_ami" "eks_worker" {
-  most_recent = true
-  owners      = ["602401143452"] # Amazon EKS optimized AMIs
-  filter {
-    name   = "name"
-    values = ["amazon-eks-node-*"]
-  }
+# --- IAM role for node group ---
+resource "aws_iam_role" "node_role" {
+  name = "${var.name}-nodegroup-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
 }
 
-resource "aws_launch_template" "eks_nodes" {
-  name_prefix   = "${var.name_prefix}-lt"
-  image_id      = data.aws_ami.eks_worker.id
-  instance_type = var.eks_node_instance_type  # ✅ Controlled via variable
-
-  # ✅ User data to configure proxy for Docker
-  user_data = base64encode(templatefile("${path.module}/node_user_data.sh", {
-    squid_ip = var.squid_private_ip
-  }))
-
-  credit_specification {
-    cpu_credits = "unlimited"
-  }
-
-  lifecycle {
-    create_before_destroy = true
-  }
-
-  tag_specifications {
-    resource_type = "instance"
-    tags = {
-      Name = "${var.name_prefix}-eks-node"
-    }
-  }
+resource "aws_iam_role_policy_attachment" "node_policies" {
+  for_each = toset([
+    "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
+    "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy",
+    "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  ])
+  role       = aws_iam_role.node_role.name
+  policy_arn = each.value
 }
 
-# ------------------------------------------------------------------
-#  Managed Node Group using Launch Template
-# ------------------------------------------------------------------
-resource "aws_eks_node_group" "ng" {
+# --- Managed Node Group ---
+resource "aws_eks_node_group" "this" {
   cluster_name    = aws_eks_cluster.this.name
-  node_group_name = "${var.name_prefix}-node-group"
-  node_role_arn   = var.node_role_arn
-  subnet_ids      = var.private_subnets
+  node_group_name = "${var.name}-nodegroup"
+  node_role_arn   = aws_iam_role.node_role.arn
+  subnet_ids      = var.private_subnet_ids
+
+  instance_types = var.node_instance_types
 
   scaling_config {
-    desired_size = 2
-    max_size     = 3
+    desired_size = var.node_desired_size
+    max_size     = var.node_desired_size + 1
     min_size     = 1
   }
 
-  launch_template {
-    id      = aws_launch_template.eks_nodes.id
-    version = "$Latest"
-  }
-
-  depends_on = [aws_launch_template.eks_nodes]
-}
-
-# ------------------------------------------------------------------
-# Outputs
-# ------------------------------------------------------------------
-output "cluster_name" {
-  value = aws_eks_cluster.this.name
-}
-
-output "node_group_name" {
-  value = aws_eks_node_group.ng.node_group_name
+  depends_on = [
+    aws_eks_cluster.this,
+    aws_iam_role_policy_attachment.node_policies
+  ]
 }

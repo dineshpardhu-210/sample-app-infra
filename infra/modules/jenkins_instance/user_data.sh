@@ -1,24 +1,21 @@
 #!/bin/bash
-apt-get update -y
-apt-get install -y openjdk-11-jre wget docker.io amazon-ssm-agent
-systemctl enable amazon-ssm-agent
-systemctl start amazon-ssm-agent
+# ---------------------------------------------
+# Jenkins bootstrap script
+# ---------------------------------------------
+sudo apt-get update -y
+sudo apt-get install -y openjdk-11-jdk curl wget gnupg2
 
-# Jenkins setup
-wget -q -O - https://pkg.jenkins.io/debian-stable/jenkins.io.key | apt-key add -
-sh -c 'echo deb https://pkg.jenkins.io/debian-stable binary/ > /etc/apt/sources.list.d/jenkins.list'
-apt-get update -y
-apt-get install -y jenkins
+# Add Jenkins repo and key
+wget -q -O - https://pkg.jenkins.io/debian-stable/jenkins.io.key | sudo apt-key add -
+sudo sh -c 'echo deb https://pkg.jenkins.io/debian-stable binary/ > /etc/apt/sources.list.d/jenkins.list'
 
-# Proxy setup
-SQUID_IP="${squid_ip}"
-echo "HTTP_PROXY=http://${squid_ip}:3128/" >> /etc/environment
-echo "HTTPS_PROXY=http://${squid_ip}:3128/" >> /etc/environment
-echo "NO_PROXY=169.254.169.254,localhost,127.0.0.1" >> /etc/environment
+# Install Jenkins
+sudo apt-get update -y
+sudo apt-get install -y jenkins
 
-echo "Acquire::http::Proxy \"http://${squid_ip}:3128/\";" > /etc/apt/apt.conf.d/01proxy
-echo "Acquire::https::Proxy \"http://${squid_ip}:3128/\";" >> /etc/apt/apt.conf.d/01proxy
+# Start Jenkins service
+sudo systemctl enable jenkins
+sudo systemctl start jenkins
 
-usermod -aG docker jenkins
-systemctl enable docker jenkins
-systemctl restart docker jenkins
+# Output verification
+echo "Jenkins installation completed successfully on $(hostname)" > /tmp/jenkins_install.log

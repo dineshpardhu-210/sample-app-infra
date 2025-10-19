@@ -1,17 +1,18 @@
-variable "name_prefix" {
-  description = "Prefix for resource names"
+variable "vpc_name" {
+  description = "Name of the VPC"
   type        = string
-}
-
-variable "aws_region" {
-  description = "AWS region for resources"
-  type        = string
+  default     = "sample-vpc"
 }
 
 variable "vpc_cidr" {
-  description = "CIDR block for the VPC"
+  description = "VPC CIDR block"
   type        = string
   default     = "10.0.0.0/16"
+}
+
+variable "region" {
+  description = "AWS region (used for interface endpoint naming)"
+  type        = string
 }
 
 variable "public_subnet_cidrs" {
@@ -23,5 +24,17 @@ variable "public_subnet_cidrs" {
 variable "private_subnet_cidrs" {
   description = "List of CIDRs for private subnets"
   type        = list(string)
-  default     = ["10.0.11.0/24", "10.0.12.0/24"]
+  default     = ["10.0.3.0/24", "10.0.4.0/24"]
+}
+
+variable "availability_zones" {
+  description = "Availability zones for subnets"
+  type        = list(string)
+  default     = ["us-east-1a", "us-east-1b"]
+}
+
+variable "tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+  default     = {}
 }

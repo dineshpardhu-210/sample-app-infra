@@ -1,15 +1,18 @@
+#############################################
+# IAM Module - outputs.tf
+#############################################
 
-# --------------------------------------------------------------------
-# Outputs
-# --------------------------------------------------------------------
-output "cluster_role_arn" {
-  value = aws_iam_role.eks_cluster_role.arn
+output "jenkins_role_name" {
+  description = "IAM Role name for Jenkins"
+  value       = aws_iam_role.jenkins_role.name
 }
 
-output "node_role_arn" {
-  value = aws_iam_role.eks_node_role.arn
+output "jenkins_role_arn" {
+  description = "IAM Role ARN for Jenkins"
+  value       = aws_iam_role.jenkins_role.arn
 }
 
-output "jenkins_ssm_instance_profile_name" {
-  value = aws_iam_instance_profile.jenkins_ssm_profile.name
+output "jenkins_instance_profile_name" {
+  description = "Instance profile name to attach to Jenkins EC2"
+  value       = aws_iam_instance_profile.jenkins_profile.name
 }

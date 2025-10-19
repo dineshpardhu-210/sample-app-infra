@@ -5,14 +5,19 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/group.name: sample-apps
 spec:
   rules:
-    - http:
+    - host: sample-app.yourdomain.com   # optional - remove if not using custom domain
+      http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: sample-app
+                name: sample-app-service
                 port:
                   number: 80

@@ -1,19 +1,23 @@
-output "eks_cluster_name" {
-  description = "Name of the EKS cluster"
-  value       = aws_eks_cluster.this.name
+output "cluster_name" {
+  value = aws_eks_cluster.this.name
 }
 
-output "eks_cluster_arn" {
-  description = "ARN of the EKS cluster"
-  value       = aws_eks_cluster.this.arn
+output "cluster_endpoint" {
+  value = aws_eks_cluster.this.endpoint
 }
 
-output "eks_node_group_name" {
-  description = "Name of the EKS node group"
-  value       = aws_eks_node_group.ng.node_group_name
+output "cluster_certificate" {
+  value = aws_eks_cluster.this.certificate_authority[0].data
 }
 
-output "launch_template_id" {
-  description = "ID of the EKS launch template"
-  value       = aws_launch_template.eks_nodes.id
+
+
+output "node_role_arn" {
+  description = "IAM role ARN for EKS node group"
+  value       = aws_iam_role.node_role.arn
+}
+
+output "node_group_name" {
+  description = "EKS node group name"
+  value       = aws_eks_node_group.this.node_group_name
 }

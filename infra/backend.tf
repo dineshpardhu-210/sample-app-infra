@@ -1,9 +1,10 @@
 terraform {
   backend "s3" {
-    bucket = "terraform-eks-din"
-    key = "statefiles/sample-app/terraform.tfstate"
-    region = "us-east-1"
-    dynamodb_table = "terraform-state-lock"
-    encrypt = true
+    bucket         = "terraform-task-eks"        # <-- your new bucket
+    key            = "statefiles/sample-app/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "terraform-task-eks"       # <-- ensure this is NEW or EMPTY
+    encrypt        = true
   }
 }
+

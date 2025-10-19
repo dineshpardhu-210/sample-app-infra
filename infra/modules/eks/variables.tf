@@ -1,30 +1,31 @@
-variable "name_prefix" {
-  description = "Prefix for EKS resources"
+variable "name" {
+  description = "EKS cluster name"
   type        = string
+  default     = "jenkins-eks"
 }
 
-variable "private_subnets" {
-  description = "List of private subnet IDs for EKS nodes"
+variable "private_subnet_ids" {
+  type        = list(string)
+  description = "Private subnet IDs for node group"
+}
+
+variable "public_subnet_ids" {
+  type        = list(string)
+  description = "Public subnet IDs for EKS cluster networking"
+}
+
+variable "tags" {
+  type        = map(string)
+  description = "Tags for EKS resources"
+  default     = {}
+}
+
+variable "node_instance_types" {
+  description = "List of instance types for node group"
   type        = list(string)
 }
 
-variable "cluster_role_arn" {
-  description = "IAM Role ARN for the EKS cluster"
-  type        = string
-}
-
-variable "node_role_arn" {
-  description = "IAM Role ARN for EKS worker nodes"
-  type        = string
-}
-
-variable "eks_node_instance_type" {
-  description = "Instance type for EKS worker nodes"
-  type        = string
-  default     = "t3.small" # ✅ You can override from root if needed
-}
-
-variable "squid_private_ip" {
-  description = "Private IP of Squid proxy for DockerHub access"
-  type        = string
+variable "node_desired_size" {
+  description = "Desired node count for the EKS node group"
+  type        = number
 }
